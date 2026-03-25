@@ -1,9 +1,3 @@
-*.env
-*.env_azure
-*.txt
-
-#!cap.txt
-
 # Logs
 logs
 *.log
