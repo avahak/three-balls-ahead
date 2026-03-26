@@ -9,6 +9,7 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 // import vs from './shaders/vs.glsl?raw';
 // import fs from './shaders/fs.glsl?raw';
 import type { AssetLoader } from './assetLoader';
+// import { test } from './math/integrate';
 
 const SHADOW_MAP_SIZE = 1024 * 2;
 
