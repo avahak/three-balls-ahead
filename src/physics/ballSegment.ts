@@ -1,3 +1,5 @@
+// Related link: https://ekiefl.github.io/2020/04/24/pooltool-theory/
+
 import { Constants as Cst } from "./constants";
 import { Vec } from "../math/vec";
 
