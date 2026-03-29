@@ -1,3 +1,6 @@
+// TODO rethink: maybe update same BallSegment instead of always creating new ones,
+// and let user clone BallSegment if the old segment is needed
+
 // Related link: https://ekiefl.github.io/2020/04/24/pooltool-theory/
 
 import { Constants as Cst } from "./constants";
@@ -63,7 +66,7 @@ class BallSegment {
         const c_spin = 2 * Cst.R / (5 * Cst.MU_SPIN * Cst.G);
         const dt_spin = c_spin * Math.abs(w0[2]);
         const t1_spin = t0 + dt_spin;   // Time when sidespin ends
-        const hasSidespin = dt_spin > Cst.EP;
+        const hasSidespin = Math.abs(w0[2]) > Cst.EP;
 
         if (r_v0 < Cst.EP && r_w0_xy < Cst.EP) {
             if (!hasSidespin) {
@@ -75,29 +78,31 @@ class BallSegment {
             return new BallSegment(t0, t1_spin, BallState.SpinningStationary, [p0[0], p0[1], 0], [0, 0, 0], [0, 0, 0], w0, dw);
         }
 
-        // v0 + r*e_3\cross w0
-        const slide_xy = [v0[0] - Cst.R * w0[1], v0[1] + Cst.R * w0[0]];
-        const r_slide_xy = Vec.norm(slide_xy);
+        // Relative velocity for sliding: u = v0 + r*e_3\cross w0
+        const u_xy = [v0[0] - Cst.R * w0[1], v0[1] + Cst.R * w0[0]];
+        const r_u_xy = Vec.norm(u_xy);
 
-        if (r_slide_xy < Cst.EP) {
+        if (r_u_xy < Cst.EP) {
             // Rolling
             const c_roll = 1 / (Cst.MU_ROLL * Cst.G);
             const dt_roll = c_roll * r_v0;
             const t1_roll = t0 + dt_roll;   // Time when rolling ends
             const a = [-v0[0] / dt_roll, -v0[1] / dt_roll, 0];
-            const dw = [-w0[0] / dt_roll, -w0[1] / dt_roll, hasSidespin ? -w0[2] / dt_roll : 0];
-            if (!hasSidespin) {
-                // Rolling without sidespin
-                return new BallSegment(t0, t1_roll, BallState.Rolling, p0, v0, a, w0, dw);
-            }
-            // Rolling with sidespin
-            const t1 = Math.min(t1_spin, t1_roll);
+            const dw = [-w0[0] / dt_roll, -w0[1] / dt_roll, hasSidespin ? -w0[2] / dt_spin : 0];
+            const t1 = hasSidespin ? Math.min(t1_spin, t1_roll) : t1_roll;
             return new BallSegment(t0, t1, BallState.Rolling, p0, v0, a, w0, dw);
         }
 
         // Sliding
-        // ...
-        return new BallSegment(t0, t1, state, p0, v0, a, w0, dw);
+        // q = e_3\cross u/|u|
+        const q = [-u_xy[1] / r_u_xy, u_xy[0] / r_u_xy, 0];
+        const c_slide = Cst.MU_SLIDE * Cst.G;
+        const dt_slide = 2 / 7 * c_slide * r_u_xy / c_slide;
+        const t1_slide = t0 + dt_slide;
+        const t1 = hasSidespin ? Math.min(t1_spin, t1_slide) : t1_slide;
+        const a = [-c_slide * u_xy[0] / r_u_xy, -c_slide * u_xy[0] / r_u_xy, 0];
+        const dw = [-5 / (2 * Cst.R) * q[0], -5 / (2 * Cst.R) * q[1], hasSidespin ? -w0[2] / dt_spin : 0];
+        return new BallSegment(t0, t1, BallState.Sliding, p0, v0, a, w0, dw);
     }
 
 }
