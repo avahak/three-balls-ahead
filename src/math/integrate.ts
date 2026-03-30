@@ -3,26 +3,28 @@ import { Quaternion, Vector3 } from "three";
 
 /**
  * Integrates a time-varying angular velocity of the affine form
- * w(t) = w0 + t*dw over the interval [0, 1] using a midpoint
+ * w(t) = w0 + t*dw over the interval [0, t0] using a midpoint
  * exponential integrator.
  *
  * The method advances the rotation by composing incremental
  * quaternion exponentials evaluated at midpoints of each step.
  * This preserves the rotation structure and yields second-order accuracy.
  *
+ * @param t0 endpoint for integration
  * @param omega0 initial angular velocity vector at t = 0
  * @param domega constant time derivative of angular velocity
  * @param steps number of uniform timesteps over [0, 1]
  * @returns unit quaternion representing the final rotation
  */
-function integrate(
+function integrateRotation(
+    t0: number,
     omega0: Vector3,
     domega: Vector3,
     steps: number = 16
 ): Quaternion {
     const q = new Quaternion();
 
-    const dt = 1.0 / steps;
+    const dt = t0 / steps;
     let t = 0;
 
     // Reusable temporaries
@@ -86,11 +88,11 @@ function testCorrectnessStats() {
         const domega = new Vector3(...Vec.randomGaussian(3, 2 * Math.PI));
 
         // Ground truth
-        const qFine = integrate(omega0, domega, finestSteps);
+        const qFine = integrateRotation(1, omega0, domega, finestSteps);
 
         // Coarse integrations
         for (const steps of stepCounts) {
-            const q = integrate(omega0, domega, steps);
+            const q = integrateRotation(1, omega0, domega, steps);
 
             // Compute rotation difference angle
             const qDiff = q.clone().conjugate().multiply(qFine);
@@ -119,7 +121,7 @@ function testPerformance() {
     let count = 0;
     while (performance.now() - startTime < 1000) {
         // @ts-ignore
-        const q = integrate(omega0, domega, steps);
+        const q = integrateRotation(omega0, domega, steps);
         count++;
     }
 
@@ -132,4 +134,4 @@ function test() {
     testPerformance();
 }
 
-export { integrate, test };
+export { integrateRotation, test };

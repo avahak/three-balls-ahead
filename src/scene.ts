@@ -9,7 +9,7 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 // import vs from './shaders/vs.glsl?raw';
 // import fs from './shaders/fs.glsl?raw';
 import type { AssetLoader } from './assetLoader';
-// import { test } from './math/integrate';
+import { test } from './physics/ballSegment';
 
 const SHADOW_MAP_SIZE = 1024 * 2;
 
@@ -46,6 +46,8 @@ class Scene {
         container.appendChild(this.renderer.domElement);
 
         this.renderer.getContext().getExtension('EXT_float_blend');
+
+        test();
 
         this.setupCamera();
         this.setupScene(assetLoader);

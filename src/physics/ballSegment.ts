@@ -3,8 +3,10 @@
 
 // Related link: https://ekiefl.github.io/2020/04/24/pooltool-theory/
 
+import * as THREE from 'three';
 import { Constants as Cst } from "./constants";
 import { Vec } from "../math/vec";
+import { integrateRotation } from '../math/integrate';
 
 const BallState = {
     Stopped: 0,
@@ -81,6 +83,7 @@ class BallSegment {
         // Relative velocity for sliding: u = v0 + r*e_3\cross w0
         const u_xy = [v0[0] - Cst.R * w0[1], v0[1] + Cst.R * w0[0]];
         const r_u_xy = Vec.norm(u_xy);
+        console.log('u_xy', u_xy);
 
         if (r_u_xy < Cst.EP) {
             // Rolling
@@ -97,16 +100,56 @@ class BallSegment {
         // q = e_3\cross u/|u|
         const q = [-u_xy[1] / r_u_xy, u_xy[0] / r_u_xy, 0];
         const c_slide = Cst.MU_SLIDE * Cst.G;
-        const dt_slide = 2 / 7 * c_slide * r_u_xy / c_slide;
+        const dt_slide = 2 / 7 * r_u_xy / c_slide;
         const t1_slide = t0 + dt_slide;
         const t1 = hasSidespin ? Math.min(t1_spin, t1_slide) : t1_slide;
-        const a = [-c_slide * u_xy[0] / r_u_xy, -c_slide * u_xy[0] / r_u_xy, 0];
-        const dw = [-5 / (2 * Cst.R) * q[0], -5 / (2 * Cst.R) * q[1], hasSidespin ? -w0[2] / dt_spin : 0];
+        const a = [-c_slide * u_xy[0] / r_u_xy, -c_slide * u_xy[1] / r_u_xy, 0];
+        const dw = [5 * c_slide / (2 * Cst.R) * q[0], 5 * c_slide / (2 * Cst.R) * q[1], hasSidespin ? -w0[2] / dt_spin : 0];
         return new BallSegment(t0, t1, BallState.Sliding, p0, v0, a, w0, dw);
     }
 
+    /**
+     * Evaluates position, angular velocity, and optionally rotation at a time in the segment. 
+     */
+    public eval(t: number, q0?: THREE.Quaternion): { p: number[], v: number[], w: number[], q?: THREE.Quaternion } {
+        if (t < this.t0 || t > this.t1)
+            throw Error("Invalid time.");
+        const dt = t - this.t0;
+        const p = Vec.wSum([this.p0, this.v0, this.a], [1, dt, 0.5 * dt * dt]);
+        const v = Vec.wSum([this.v0, this.a], [1, dt]);
+        const w = Vec.wSum([this.w0, this.dw], [1, dt]);
+        if (q0) {
+            const q = integrateRotation(dt, new THREE.Vector3(...this.w0), new THREE.Vector3(...this.dw));
+            return { p, v, w, q };
+        }
+        return { p, v, w };
+    }
 }
 
+const test = () => {
+    const t0 = 10.0 * Vec.gaussian();
+    const p0 = [...Vec.randomGaussian(2, 1), 0];
+    const v0 = [...Vec.randomGaussian(2, 1), 0];
+    const w0 = Vec.randomGaussian(3, 1);
+    // const t0 = 0;
+    // const p0 = [0, 0, 0];
+    // const v0 = [1, 0, 0];
+    // const w0 = [0, 0, 0];
+    let q = new THREE.Quaternion(0, 0, 0, 1);
+    let bs = BallSegment.create(t0, p0, v0, w0);
 
-export { BallState, BallSegment };
+    let iter = 0;
+    while (iter < 10) {
+        console.log("iter", iter, "t", bs.t0, "state", bs.state, "q", q, { ...bs });
+        iter++;
+
+        const dt = Math.min(bs.t1 - bs.t0, 10);
+        const evalResult = bs.eval(bs.t0 + dt, q);
+        q.multiply(evalResult.q!);
+        bs = BallSegment.create(bs.t0 + dt, evalResult.p, evalResult.v, evalResult.w);
+    }
+};
+
+
+export { BallState, BallSegment, test };
 export type BallState = (typeof BallState)[keyof typeof BallState];
