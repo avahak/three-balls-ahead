@@ -12,6 +12,7 @@ const SceneComponent: React.FC = () => {
 	useEffect(() => {
 		console.log("useEffect: ", containerRef.current);
 		const scene = new Scene(containerRef.current!, assetLoader);
+		scene.init();
 		return () => {
 			scene.dispose();
 		};

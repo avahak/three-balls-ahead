@@ -53,7 +53,7 @@ class BallSegment {
         w0: number[],
     ): BallSegment {
         const r_v0 = Vec.norm(v0);
-        const r_w0 = Vec.norm(w0);
+        // const r_w0 = Vec.norm(w0);
         const r_w0_xy = Vec.norm([w0[0], w0[1]]);
 
         if (Math.abs(p0[2]) > Cst.EP || Math.abs(v0[2]) > Cst.EP) {
