@@ -12,6 +12,8 @@ import type { AssetLoader } from './rendering/assetLoader';
 import { BallSegment, BallState, test } from './physics/ballSegment';
 import { Vec } from './math/vec';
 import { UCBSplineGroup } from './rendering/UCBSpline';
+import { OverheadCamera } from './overheadCamera';
+import { Constants as Cst } from './physics/constants';
 
 const SHADOW_MAP_SIZE = 1024;
 
@@ -26,7 +28,7 @@ const setShadow = (object: THREE.Object3D, castShadow: boolean, receiveShadow: b
 
 class Scene {
     container: HTMLDivElement;
-    camera!: THREE.Camera;
+    overheadCamera!: OverheadCamera;
     scene!: THREE.Scene;
     renderer: THREE.WebGLRenderer;
     cleanUpTasks: (() => void)[];
@@ -48,6 +50,8 @@ class Scene {
 
         this.renderer.getContext().getExtension('EXT_float_blend');
 
+        this.overheadCamera = new OverheadCamera(container);
+
         this.assetLoader = assetLoader;
     }
 
@@ -56,7 +60,6 @@ class Scene {
 
         test();
 
-        this.setupCamera();
         this.setupScene();
         this.setupResizeRenderer();
         this.createGUI();
@@ -83,14 +86,9 @@ class Scene {
         console.log(`Resize! (${clientWidth}, ${clientHeight})`);
         this.renderer.setSize(clientWidth, clientHeight);
         const aspect = clientWidth / clientHeight;
-        if (this.camera instanceof THREE.OrthographicCamera) {
-            this.camera.left = -aspect;
-            this.camera.right = aspect;
-            this.camera.updateProjectionMatrix();
-        } else if (this.camera instanceof THREE.PerspectiveCamera) {
-            this.camera.aspect = aspect;
-            this.camera.updateProjectionMatrix();
-        }
+
+        this.overheadCamera.setAspectRatio(aspect);
+
         // this.shader.uniforms.resolution.value = new THREE.Vector2(clientWidth, clientHeight);
     }
 
@@ -129,13 +127,6 @@ class Scene {
         this.gui?.destroy();
     }
 
-    setupCamera() {
-        this.camera = new THREE.PerspectiveCamera(45, 1.0, 0.1, 100.0);
-
-        this.camera.position.set(0, 0, 2);
-        this.camera.lookAt(new THREE.Vector3(0, 0, 0));
-    }
-
     setupScene() {
         this.scene = new THREE.Scene();
 
@@ -166,6 +157,7 @@ class Scene {
         setShadow(group, true, true);
         this.scene.add(group);
 
+        // @ts-ignore
         const getControlPoints = (t0: number, t1: number, p0: number[], v0: number[], a: number[]) => {
             // a = A * h * h
             // b = (2.0 * A * t0 + B) * h
@@ -178,7 +170,7 @@ class Scene {
             const dt = t1 - t0;
             const cpList = [];
             for (let k = -1; k < 3; k++) {
-                const v = Vec.wSum([a, v0, p0], [(k * k - 1 / 3) * dt * dt / 2, k * dt, 1]);
+                const v = Vec.wSum([a, v0, p0, [0, 0, 1]], [(k * k - 1 / 3) * dt * dt / 2, k * dt, 1, Cst.R]);
                 cpList.push(new THREE.Vector3(...v));
             }
             console.log(cpList);
@@ -189,8 +181,8 @@ class Scene {
             // for line segments control points [2*A-B, A, B, 2*B-A] are perfect, 
             // with C(0)=A, C(1)=B, constant speed C'(t)=B-A.
             const e3 = [0, 0, 1];
-            const q0 = Vec.wSum([p0, e3], [1, Math.abs(Vec.gaussian() * 0.1)]);
-            const q1 = Vec.wSum([p1, e3], [1, Math.abs(Vec.gaussian() * 0.1)]);
+            const q0 = Vec.wSum([p0, e3], [1, Cst.R + Math.abs(Vec.gaussian() * 0.0)]);
+            const q1 = Vec.wSum([p1, e3], [1, Cst.R + Math.abs(Vec.gaussian() * 0.0)]);
 
             const cp0 = Vec.wSum([q0, q1], [2, -1]);
             const cp1 = Vec.wSum([q0, q1], [1, 0]);
@@ -203,14 +195,14 @@ class Scene {
         };
 
         // const t0 = 10.0 * Vec.gaussian();
-        // const p0 = [...Vec.randomGaussian(2, 1), 0];
-        // const v0 = [...Vec.randomGaussian(2, 1), 0];
-        // const w0 = Vec.randomGaussian(3, 1);
+        // const p0 = [...Vec.vGaussian(2, 1), 0];
+        // const v0 = [...Vec.vGaussian(2, 1), 0];
+        // const w0 = Vec.vGaussian(3, 1);
         const t0 = 0;
         const p0 = [-1, 0, 0];
         const v0 = [2.5, 0, 0];
         const w0 = [10, -250, 50];
-        const maxStep = 1 / 10;
+        const maxStep = 1;
         let q = new THREE.Quaternion(0, 0, 0, 1);
         let bs = BallSegment.create(t0, p0, v0, w0);
 
@@ -219,7 +211,7 @@ class Scene {
         stateColor.set(BallState.Flying, [0.25, 0.25, 1]);
         stateColor.set(BallState.Stopped, [1, 1, 1]);
         stateColor.set(BallState.SpinningStationary, [0.25, 1, 0.25]);
-        stateColor.set(BallState.Rolling, [1, 0.25, 1]);
+        stateColor.set(BallState.Rolling, [0.25, 1, 1]);
         stateColor.set(BallState.Sliding, [1, 0.25, 0.25]);
 
         let iter = 0;
@@ -232,9 +224,9 @@ class Scene {
             const dt = Math.min(bs.t1 - bs.t0, maxStep);
             const evalResult = bs.eval(bs.t0 + dt, q);
 
-            // sg.addSpline(getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a), () => stateColor.get(bs.state)!);
+            sg.addSpline(getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a), () => stateColor.get(bs.state)!);
             // sg.addSpline(getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a), () => [Math.random(), Math.random(), Math.random()]);
-            sg.addSpline(getControlPointsDebug(bs.p0, evalResult.p), () => stateColor.get(bs.state)!);
+            // sg.addSpline(getControlPointsDebug(bs.p0, evalResult.p), () => stateColor.get(bs.state)!);
 
             q.multiply(evalResult.q!);
             bs = BallSegment.create(bs.t0 + dt, evalResult.p, evalResult.v, evalResult.w);
@@ -257,13 +249,9 @@ class Scene {
         const currentTime = (this.lastTime ?? 0.0) + 1.0;
         this.lastTime = currentTime;
 
-        const t = this.lastTime * 0.002;
+        // const t = this.lastTime * 0.002;
 
-        this.camera.position.set(2.0 * Math.cos(-t), 2.0 * Math.sin(-t), 1.5);
-        this.camera.up.set(0.0, 0.0, 1.0);
-        this.camera.lookAt(new THREE.Vector3(0.0, 0.0, -0.5));
-
-        this.renderer.render(this.scene, this.camera);
+        this.renderer.render(this.scene, this.overheadCamera.camera);
     }
 }
 

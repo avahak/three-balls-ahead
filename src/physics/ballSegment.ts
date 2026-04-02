@@ -128,9 +128,9 @@ class BallSegment {
 
 const test = () => {
     const t0 = 10.0 * Vec.gaussian();
-    const p0 = [...Vec.randomGaussian(2, 1), 0];
-    const v0 = [...Vec.randomGaussian(2, 1), 0];
-    const w0 = Vec.randomGaussian(3, 1);
+    const p0 = [...Vec.vGaussian(2, 1), 0];
+    const v0 = [...Vec.vGaussian(2, 1), 0];
+    const w0 = Vec.vGaussian(3, 1);
     // const t0 = 0;
     // const p0 = [0, 0, 0];
     // const v0 = [1, 0, 0];

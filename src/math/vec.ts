@@ -12,7 +12,7 @@ type VecStats = {
  * A collection of static methods for n-dimensional vector operations.
  */
 class Vec {
-    static gaussianSpare: number | null = null;
+    private static gaussianSpare: number | null = null;
 
     private constructor() { } // Prevent instantiation
 
@@ -121,7 +121,7 @@ class Vec {
      * @param std Standard deviation (default: 1)
      * @returns Array with random components ~N(0, std^2)
      */
-    static randomGaussian(dim: number = 3, std: number = 1): number[] {
+    static vGaussian(dim: number = 3, std: number = 1): number[] {
         if (dim <= 0)
             throw new Error("Dimension must be positive");
         if (std < 0)
@@ -200,6 +200,24 @@ class Vec {
             p[0] * Math.sin(theta) + p[1] * Math.cos(theta),
             p[2]
         ];
+    }
+
+    /**
+     * Returns Cartesian coordinates given spherical coordinates (r,elevation angle,azimutal angle).
+     */
+    static cartesianFromSpherical(r: number, theta: number, phi: number): number[] {
+        const q = r * Math.cos(theta);
+        return [q * Math.cos(phi), q * Math.sin(phi), r * Math.sin(theta)];
+    }
+
+    /**
+     * Returns spherical coordinates (r,elevation angle,azimutal angle) given Cartesian coordinates.
+     */
+    static sphericalFromCartesian(x: number, y: number, z: number): number[] {
+        const r = Vec.norm([x, y, z]);
+        const theta = Math.asin(z / r);
+        const phi = Math.atan2(y, x);
+        return [r, theta, phi];
     }
 
 

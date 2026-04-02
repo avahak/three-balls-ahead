@@ -84,8 +84,8 @@ function testCorrectnessStats() {
         logErrors[steps] = [];
 
     for (let trial = 0; trial < numTrials; trial++) {
-        const omega0 = new Vector3(...Vec.randomGaussian(3, 2 * Math.PI));
-        const domega = new Vector3(...Vec.randomGaussian(3, 2 * Math.PI));
+        const omega0 = new Vector3(...Vec.vGaussian(3, 2 * Math.PI));
+        const domega = new Vector3(...Vec.vGaussian(3, 2 * Math.PI));
 
         // Ground truth
         const qFine = integrateRotation(1, omega0, domega, finestSteps);
@@ -113,8 +113,8 @@ function testCorrectnessStats() {
 }
 
 function testPerformance() {
-    const omega0 = new Vector3(...Vec.randomGaussian(3, 2 * Math.PI));
-    const domega = new Vector3(...Vec.randomGaussian(3, 2 * Math.PI));
+    const omega0 = new Vector3(...Vec.vGaussian(3, 2 * Math.PI));
+    const domega = new Vector3(...Vec.vGaussian(3, 2 * Math.PI));
     const steps = 16;
 
     const startTime = performance.now();

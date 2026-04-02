@@ -19,9 +19,9 @@ class UCBSplineGroup {
     mesh: THREE.Line;
 
     // (x,y,z,0,red,green,blue,0) for each control point, flattened
-    controlPointArray: Float32Array<ArrayBuffer>;
+    controlPointArray: Float32Array;
     // index i for plotting Bezier for control points (i,i+1,i+2,i+3)
-    indexArray: Int32Array<ArrayBuffer>;
+    indexArray: Int32Array;
 
     numControlPoints: number = 0;
     numIndexes: number = 0;

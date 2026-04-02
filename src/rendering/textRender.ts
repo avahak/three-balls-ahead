@@ -22,7 +22,7 @@ class TextGroup {
     dataTexture: THREE.Texture;
     mesh: THREE.Object3D;
 
-    data: Float32Array<ArrayBuffer>;
+    data: Float32Array;
     numChars!: number;
 
     constructor(font: MCSDFFont) {
