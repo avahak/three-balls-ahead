@@ -7,7 +7,7 @@ uniform int numSegments;
 uniform sampler2D controlPointTexture;
 uniform isampler2D indexTexture;
 
-out vec3 color;
+out vec3 v_color;
 
 #define PI 3.14159265359
 
@@ -54,7 +54,7 @@ void main() {
     vec4 w = splineCoeffs(t);
 
     vec3 p = w.x*p0 + w.y*p1 + w.z*p2 + w.w*p3;
-    color = w.x*c0 + w.y*c1 + w.z*c2 + w.w*c3;
+    v_color = w.x*c0 + w.y*c1 + w.z*c2 + w.w*c3;
 
     vec4 vPos = vec4(p, 1.0);
 

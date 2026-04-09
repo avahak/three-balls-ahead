@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Vec } from './math/vec';
+import { VecMath } from './math/vec';
 
 class OverheadCamera {
     camera: THREE.PerspectiveCamera;
@@ -73,8 +73,8 @@ class OverheadCamera {
         const p1 = new THREE.Vector3().copy(this.camera.position).add(v1.multiplyScalar(t1));
 
         let w = [p0.x - p1.x, p0.y - p1.y];
-        if (Vec.norm(w) > 0.1)
-            w = Vec.normalize(w, 0.1);
+        if (VecMath.norm(w) > 0.1)
+            w = VecMath.normalize(w, 0.1);
 
         this.set(this.r, this.theta, this.phi, this.x0 + w[0], this.y0 + w[1]);
     }
@@ -83,7 +83,7 @@ class OverheadCamera {
      * Updates this.camera position and direction.
      */
     private update() {
-        const v = Vec.cartesianFromSpherical(this.r, this.theta, this.phi);
+        const v = VecMath.cartesianFromSpherical(this.r, this.theta, this.phi);
 
         this.camera.position.set(this.x0 + v[0], this.y0 + v[1], v[2]);
         this.camera.lookAt(new THREE.Vector3(this.x0, this.y0, 0));

@@ -5,8 +5,8 @@ uniform int useFisheye;
 uniform float focalLength;
 uniform sampler2D dataTexture;
 
-out vec2 atlasCoords;
-out vec3 color;
+out vec2 v_atlasCoords;
+out vec3 v_color;
 
 #define TEXTURE_MAX_WIDTH 1024
 
@@ -39,10 +39,10 @@ void main() {
     vec3 e1 = vec3(tf1.w, tf2.xy);
     vec3 e2 = vec3(tf2.zw, tf3.x);
     int faceCamera = int(floor(0.25+0.5*tf3.y));
-    color = vec3(tf3.y - 2.0*float(faceCamera), tf3.zw);
+    v_color = vec3(tf3.y - 2.0*float(faceCamera), tf3.zw);
 
     vec2 vUv = position.xy;
-    atlasCoords = atlas4.xy + vUv*(atlas4.zw - atlas4.xy);
+    v_atlasCoords = atlas4.xy + vUv*(atlas4.zw - atlas4.xy);
 
     vec4 vPos;
     if (faceCamera == 0) {

@@ -1,5 +1,5 @@
 import { createContext, useContext, useRef, type ReactNode } from 'react';
-import { AssetLoader } from '../rendering/assetLoader';
+import { AssetLoader } from '../assetLoader';
 
 const AssetLoaderContext = createContext<AssetLoader | null>(null);
 

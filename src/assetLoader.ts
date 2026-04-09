@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
-import { MCSDFFont } from './font';
+import { MCSDFFont } from './rendering/font';
 
 interface AssetCache {
     [key: string]: any;

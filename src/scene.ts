@@ -8,10 +8,10 @@ import * as THREE from 'three';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 // import vs from './shaders/vs.glsl?raw';
 // import fs from './shaders/fs.glsl?raw';
-import type { AssetLoader } from './rendering/assetLoader';
+import type { AssetLoader } from './assetLoader';
 import { BallSegment, BallState, test } from './physics/ballSegment';
-import { Vec } from './math/vec';
-import { UCBSplineGroup } from './rendering/UCBSpline';
+import { VecMath } from './math/vec';
+import { FatUCBSplineGroup } from './rendering/FatUCBSpline';
 import { OverheadCamera } from './overheadCamera';
 import { Constants as Cst } from './physics/constants';
 
@@ -39,13 +39,16 @@ class Scene {
 
     assetLoader: AssetLoader;
 
+    sg: FatUCBSplineGroup | null = null;
+
     constructor(container: HTMLDivElement, assetLoader: AssetLoader) {
         this.container = container;
         this.cleanUpTasks = [];
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setClearColor(0x000000, 0);
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFShadowMap;
+        this.renderer.shadowMap.type = THREE.PCFShadowMap;  // This may give WebGL warning
+        // this.renderer.shadowMap.type = THREE.BasicShadowMap;
         container.appendChild(this.renderer.domElement);
 
         this.renderer.getContext().getExtension('EXT_float_blend');
@@ -77,6 +80,7 @@ class Scene {
             this.assetLoader.loadModel("table", "/three-balls-ahead/table/pooltable.obj", "/three-balls-ahead/table/pooltable.mtl"),
             this.assetLoader.loadModel("cushions", "/three-balls-ahead/table/cushions.obj", "/three-balls-ahead/table/pooltable.mtl"),
             this.assetLoader.loadFont("gara64", "/three-balls-ahead/fonts/", "gara64"),
+            this.assetLoader.loadFile("table_json", "/three-balls-ahead/table/pooltable.json", "json"),
         ]);
     }
 
@@ -89,7 +93,7 @@ class Scene {
 
         this.overheadCamera.setAspectRatio(aspect);
 
-        // this.shader.uniforms.resolution.value = new THREE.Vector2(clientWidth, clientHeight);
+        this.sg?.setResolution(this.renderer);
     }
 
     setupResizeRenderer() {
@@ -118,6 +122,8 @@ class Scene {
     }
 
     dispose() {
+        // this.sg?.dispose();
+
         this.container.removeChild(this.renderer.domElement);
         for (const task of this.cleanUpTasks)
             task();
@@ -170,43 +176,44 @@ class Scene {
             const dt = t1 - t0;
             const cpList = [];
             for (let k = -1; k < 3; k++) {
-                const v = Vec.wSum([a, v0, p0, [0, 0, 1]], [(k * k - 1 / 3) * dt * dt / 2, k * dt, 1, Cst.R]);
+                const v = VecMath.wSum([a, v0, p0, [0, 0, 1]], [(k * k - 1 / 3) * dt * dt / 2, k * dt, 1, Cst.R]);
                 cpList.push(new THREE.Vector3(...v));
             }
             console.log(cpList);
             return cpList;
         };
 
+        // @ts-ignore
         const getControlPointsDebug = (p0: number[], p1: number[]) => {
             // for line segments control points [2*A-B, A, B, 2*B-A] are perfect, 
             // with C(0)=A, C(1)=B, constant speed C'(t)=B-A.
             const e3 = [0, 0, 1];
-            const q0 = Vec.wSum([p0, e3], [1, Cst.R + Math.abs(Vec.gaussian() * 0.0)]);
-            const q1 = Vec.wSum([p1, e3], [1, Cst.R + Math.abs(Vec.gaussian() * 0.0)]);
+            const q0 = VecMath.wSum([p0, e3], [1, Cst.R + Math.abs(VecMath.gaussian() * 0.0)]);
+            const q1 = VecMath.wSum([p1, e3], [1, Cst.R + Math.abs(VecMath.gaussian() * 0.0)]);
 
-            const cp0 = Vec.wSum([q0, q1], [2, -1]);
-            const cp1 = Vec.wSum([q0, q1], [1, 0]);
-            const cp2 = Vec.wSum([q0, q1], [0, 1]);
-            const cp3 = Vec.wSum([q0, q1], [-1, 2]);
+            const cp0 = VecMath.wSum([q0, q1], [2, -1]);
+            const cp1 = VecMath.wSum([q0, q1], [1, 0]);
+            const cp2 = VecMath.wSum([q0, q1], [0, 1]);
+            const cp3 = VecMath.wSum([q0, q1], [-1, 2]);
             return [
                 new THREE.Vector3(...cp0), new THREE.Vector3(...cp1),
                 new THREE.Vector3(...cp2), new THREE.Vector3(...cp3)
             ];
         };
 
-        // const t0 = 10.0 * Vec.gaussian();
-        // const p0 = [...Vec.vGaussian(2, 1), 0];
-        // const v0 = [...Vec.vGaussian(2, 1), 0];
-        // const w0 = Vec.vGaussian(3, 1);
+        // const t0 = 10.0 * VecMath.gaussian();
+        // const p0 = [...VecMath.vGaussian(2, 1), 0];
+        // const v0 = [...VecMath.vGaussian(2, 1), 0];
+        // const w0 = VecMath.vGaussian(3, 1);
         const t0 = 0;
         const p0 = [-1, 0, 0];
         const v0 = [2.5, 0, 0];
         const w0 = [10, -250, 50];
         const maxStep = 1;
         let q = new THREE.Quaternion(0, 0, 0, 1);
-        let bs = BallSegment.create(t0, p0, v0, w0);
+        let bs = BallSegment.createFromInitialValues(t0, p0, v0, w0);
 
-        const sg = new UCBSplineGroup();
+        this.sg = new FatUCBSplineGroup();
         const stateColor = new Map<BallState, number[]>();
         stateColor.set(BallState.Flying, [0.25, 0.25, 1]);
         stateColor.set(BallState.Stopped, [1, 1, 1]);
@@ -215,23 +222,29 @@ class Scene {
         stateColor.set(BallState.Sliding, [1, 0.25, 0.25]);
 
         let iter = 0;
-        while (iter < 50) {
+        const maxIter = 5;
+        while (iter < maxIter) {
             console.log("iter", iter, "t", bs.t0, "state", bs.state, "q", q, { ...bs });
-            if (bs.state == BallState.Stopped)
+            if (bs.state == BallState.Stopped || bs.state == BallState.SpinningStationary)
                 break;
             iter++;
 
             const dt = Math.min(bs.t1 - bs.t0, maxStep);
             const evalResult = bs.eval(bs.t0 + dt, q);
 
-            sg.addSpline(getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a), () => stateColor.get(bs.state)!);
-            // sg.addSpline(getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a), () => [Math.random(), Math.random(), Math.random()]);
-            // sg.addSpline(getControlPointsDebug(bs.p0, evalResult.p), () => stateColor.get(bs.state)!);
+            console.log(iter, maxIter, bs.state);
+            this.sg.addSpline(getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a), () => stateColor.get(bs.state)!, () => [0.002, 3.0], false, iter == 1, iter == maxIter);
+            // if (iter == 5) {
+            //     this.sg.addSpline(getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a), () => stateColor.get(bs.state)!, () => [0.01, 15.0], false, true, true);
+            //     console.log("control points", getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a));
+            // }
+            // this.sg.addSpline(getControlPoints(bs.t0, bs.t0 + dt, bs.p0, bs.v0, bs.a), () => [Math.random(), Math.random(), Math.random()], () => [0.01, 5.0], false, true, true);
+            // this.sg.addSpline(getControlPointsDebug(bs.p0, evalResult.p), () => stateColor.get(bs.state)!, () => [0.01, 5.0], false, true, true);
 
             q.multiply(evalResult.q!);
-            bs = BallSegment.create(bs.t0 + dt, evalResult.p, evalResult.v, evalResult.w);
+            bs = BallSegment.createFromInitialValues(bs.t0 + dt, evalResult.p, evalResult.v, evalResult.w);
         }
-        this.scene.add(sg.getObject());
+        this.scene.add(this.sg.getObject());
     }
 
     getResolution() {

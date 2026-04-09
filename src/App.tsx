@@ -55,7 +55,7 @@ const SceneComponent: React.FC = () => {
 			},
 			keyboard: {
 				keydown: (args) => {
-					console.log('key', args);
+					// console.log('key', args);
 					if (args.key === "-")
 						scene.overheadCamera.changeOrbit(9 / 10, 0, 0);
 					if (args.key === "+")
