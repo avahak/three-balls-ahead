@@ -37,36 +37,65 @@ class Table {
      * Finds closest point on the slate to p. Nontrivial because of the geometry.
      */
     public getClosestSlatePoint(p: Vec3): Vec3 {
-        const p2 = [p[0], p[1]];
+        // Logic: 
+        // Case A) point inside circle -> circle projection or corner point
+        // Case B) point outside circle -> projection to box if that outside circle too 
+        //    or corner point otherwise
+
+        const p2: Vec2 = [p[0], p[1]];
         const box = Table.tableJson.railbox;
-        // 1) Clamp cp to box:
-        let cp: Vec2 = [clamp(p[0], -box[0], box[0]), clamp(p[1], -box[1], box[1])];
-        // 2) If cp is inside pocket circles, project it to the circle:
+        const corners = Table.tableJson[`pocket_fall_corners`];
+
+        // Case A: point p2 inside one of the circles
         for (let k = 0; k < 6; k++) {
             const center = Table.pocketCenters[k];
             const radius = Table.pocketRadii[k];
-            if (VecMath.distance(cp, center) < radius)
-                cp = VecMath.add(center, VecMath.normalize(VecMath.sub(cp, center), radius));
-        }
-        // 3) If point is inside box, return it:
-        if ((Math.abs(cp[0]) <= box[0]) && (Math.abs(cp[1]) <= box[1]))
-            return [...cp, 0];
-
-        // 4) if point outside box, return closest point from pocket_fall_corners
-        const corners = Table.tableJson[`pocket_fall_corners`];
-        const closest: [number, Vec2 | null] = [Infinity, null];
-        for (let k = 0; k < 12; k++) {
-            const corner: Vec2 = [corners[k][0], corners[k][1]];
-            const dist = VecMath.distance(p2, corner);
-            if (dist < closest[0]) {
-                closest[0] = dist;
-                closest[1] = corner;
+            const r = VecMath.distance(p2, center);
+            if (r < radius) {
+                const cp = VecMath.add(center, VecMath.normalize(VecMath.sub(p2, center), radius));
+                const closest: [number, Vec2] = [radius - r, cp];
+                // Here we only need to check corresponding 2 corners
+                for (let j = 2 * k; j < 2 * (k + 1); j++) {
+                    const corner: Vec2 = [corners[j][0], corners[j][1]];
+                    const dist = VecMath.distance(p2, corner);
+                    if (dist < closest[0]) {
+                        closest[0] = dist;
+                        closest[1] = corner;
+                    }
+                }
+                return [closest[1][0], closest[1][1], 0];
             }
         }
-        return [closest[1]![0], closest[1]![1], 0];
+
+        // Case B: point p2 outside all circles
+        // Point clamped to box
+        let bp: Vec2 = [clamp(p[0], -box[0], box[0]), clamp(p[1], -box[1], box[1])];
+        // If bp is inside one of the circles then closest is one of the two corner points:
+        for (let k = 0; k < 6; k++) {
+            const center = Table.pocketCenters[k];
+            const radius = Table.pocketRadii[k];
+            const r = VecMath.distance(bp, center);
+            if (r < radius) {
+                const closest: [number, Vec2 | null] = [Number.POSITIVE_INFINITY, null];
+                // Here we only need to check corresponding 2 corners
+                for (let j = 2 * k; j < 2 * (k + 1); j++) {
+                    const corner: Vec2 = [corners[j][0], corners[j][1]];
+                    const dist = VecMath.distance(p2, corner);
+                    if (dist < closest[0]) {
+                        closest[0] = dist;
+                        closest[1] = corner;
+                    }
+                }
+                return [closest[1]![0], closest[1]![1], 0];
+            }
+        }
+
+        // Point outside circles and closest box point (bp) also outside circles -> bp
+        return [bp[0], bp[1], 0];
     }
 
     public getClosestCushionPoint(p: Vec3): Vec3 {
+        // TODO a lot of optimization can be done here
         const closestCushion: [Vec3 | null, number] = [null, Infinity];
         for (let k = 0; k < Table.cushionVertices.length / 3; k++) {
             const cp = closestPointTriangle(

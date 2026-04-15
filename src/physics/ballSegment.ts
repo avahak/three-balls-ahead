@@ -1,6 +1,3 @@
-// TODO rethink: maybe update same BallSegment instead of always creating new ones,
-// and let user clone BallSegment if the old segment is needed
-
 // Related link: https://ekiefl.github.io/2020/04/24/pooltool-theory/
 
 import * as THREE from 'three';
