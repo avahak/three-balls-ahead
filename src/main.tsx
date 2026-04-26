@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+// import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createTheme, CssBaseline, ThemeProvider } from '@mui/material';
 import { AppRouter } from './AppRouter';
@@ -14,9 +14,9 @@ const darkTheme = createTheme({
 
 createRoot(document.getElementById('root')!).render(
 	<ThemeProvider theme={darkTheme}>
-		<StrictMode>
-			<CssBaseline />
-			<AppRouter />
-		</StrictMode>
+		{/* <StrictMode> */}
+		<CssBaseline />
+		<AppRouter />
+		{/* </StrictMode> */}
 	</ThemeProvider>
 );

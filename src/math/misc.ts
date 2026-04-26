@@ -63,4 +63,12 @@ function clamp(x: number, minValue: number, maxValue: number) {
     return Math.max(Math.min(x, maxValue), minValue);
 }
 
-export { closestPointTriangle, clamp };
+/**
+ * Bijection N x N -> N.
+ * See: https://en.wikipedia.org/wiki/Pairing_function#Cantor_pairing_function
+ */
+function cantorFunction(x: number, y: number): number {
+    return ((x + y + 1) * (x + y)) / 2 + y;
+}
+
+export { closestPointTriangle, clamp, cantorFunction };

@@ -3,8 +3,8 @@ import { Box, Container, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { Link as MUILink } from '@mui/material';
 import { Scene } from './scene';
-import { useAssetLoader } from './contexts/AssetLoaderContext';
-import { InputListener } from './inputListener';
+import { useAssetLoader } from '../contexts/AssetLoaderContext';
+import { InputListener } from '../inputListener';
 
 const SceneComponent: React.FC = () => {
 	const assetLoader = useAssetLoader();
@@ -35,7 +35,7 @@ const SceneComponent: React.FC = () => {
 			},
 			wheel: {
 				zoom: (args) => {
-					scene.overheadCamera.changeOrbit(Math.exp(0.001 * args.delta), 0, 0);
+					scene.overheadCamera.changeOrbit(Math.exp(-0.001 * args.delta), 0, 0);
 				},
 				// pan: (args) => {
 				// 	console.log(args);
@@ -57,9 +57,9 @@ const SceneComponent: React.FC = () => {
 				keydown: (args) => {
 					// console.log('key', args);
 					if (args.key === "-")
-						scene.overheadCamera.changeOrbit(9 / 10, 0, 0);
-					if (args.key === "+")
 						scene.overheadCamera.changeOrbit(10 / 9, 0, 0);
+					if (args.key === "+")
+						scene.overheadCamera.changeOrbit(9 / 10, 0, 0);
 					if (args.key == "ArrowLeft")
 						scene.overheadCamera.moveFocus(0, 0, -0.1, 0);
 					if (args.key == "ArrowRight")

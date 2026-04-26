@@ -1,23 +1,26 @@
 import { BallSegment } from "./ballSegment";
-import { Table } from "./table";
+import { Constants } from "./constants";
+import type { BallStats } from "./types";
 
 class Ball {
     seg: BallSegment;
-    r: number;
+    stats: BallStats;
+    name: string;
 
-    constructor(seg: BallSegment, r: number) {
+    constructor(seg: BallSegment) {
         this.seg = seg;
-        this.r = r;
+        const [m, r] = [Constants.M, Constants.R];
+        this.stats = { r: r, m: m, im: 1 / m, inertia: 2 / 5 * m * r * r };
+        this.name = "-";
     }
 
-    createDummy(t: number): Ball {
+    static createDummy(t: number): Ball {
         const seg = BallSegment.createFromInitialValues(t, [0, 0, 0], [0, 0, 0], [0, 0, 0]);
-        const r = Table.tableJson.BALL_RADIUS;
-        return new Ball(seg, r);
+        return new Ball(seg);
     }
 
     clone(): Ball {
-        return new Ball(this.seg.clone(), this.r);
+        return new Ball(this.seg.clone());
     }
 }
 

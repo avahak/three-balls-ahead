@@ -35,7 +35,7 @@ class OverheadCamera {
     }
 
     set(r: number, theta: number, phi: number, x0: number, y0: number) {
-        this.r = Math.min(10, Math.max(0.5, r));
+        this.r = Math.min(10, Math.max(0.1, r));
         this.theta = Math.min(0.499 * Math.PI, Math.max(Math.PI / 16, theta));
         this.phi = phi % (2 * Math.PI);
         this.x0 = x0;
@@ -45,7 +45,7 @@ class OverheadCamera {
 
     changeOrbit(scale: number, dTheta: number, dPhi: number) {
         this.set(
-            this.r * scale,
+            this.r / scale,
             this.theta + this.sensitivity * dTheta,
             this.phi - this.sensitivity * dPhi,
             this.x0, this.y0

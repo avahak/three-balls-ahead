@@ -20,14 +20,14 @@ function integrateRotation(
     t0: number,
     omega0: Vector3,
     domega: Vector3,
-    steps: number = 16
+    steps: number = 32
 ): Quaternion {
     const q = new Quaternion();
 
     const dt = t0 / steps;
     let t = 0;
 
-    // Reusable temporaries
+    // Reuse vectors
     const omegaMid = new Vector3();
     const theta = new Vector3();
     const deltaQ = new Quaternion();

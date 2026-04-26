@@ -1,6 +1,6 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { FrontPage } from './FrontPage.tsx';
-import { App } from './App.tsx';
+import { App } from './collision_test_scene/App.tsx';
 import { AssetLoaderProvider } from './contexts/AssetLoaderContext.tsx';
 
 const AppRouter = () => {
@@ -8,7 +8,7 @@ const AppRouter = () => {
         <HashRouter>
             <AssetLoaderProvider>
                 <Routes>
-                    <Route path="/test" element={<App />} />
+                    <Route path="/collision_test" element={<App />} />
                     <Route path="/" element={<FrontPage />} />
                 </Routes>
             </AssetLoaderProvider>

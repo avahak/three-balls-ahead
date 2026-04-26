@@ -45,6 +45,7 @@ class Table {
         const p2: Vec2 = [p[0], p[1]];
         const box = Table.tableJson.railbox;
         const corners = Table.tableJson[`pocket_fall_corners`];
+        const ballRadius = Table.tableJson.specs.BALL_RADIUS;
 
         // Case A: point p2 inside one of the circles
         for (let k = 0; k < 6; k++) {
@@ -63,7 +64,7 @@ class Table {
                         closest[1] = corner;
                     }
                 }
-                return [closest[1][0], closest[1][1], 0];
+                return [closest[1][0], closest[1][1], -ballRadius];
             }
         }
 
@@ -86,12 +87,12 @@ class Table {
                         closest[1] = corner;
                     }
                 }
-                return [closest[1]![0], closest[1]![1], 0];
+                return [closest[1]![0], closest[1]![1], -ballRadius];
             }
         }
 
         // Point outside circles and closest box point (bp) also outside circles -> bp
-        return [bp[0], bp[1], 0];
+        return [bp[0], bp[1], -ballRadius];
     }
 
     public getClosestCushionPoint(p: Vec3): Vec3 {

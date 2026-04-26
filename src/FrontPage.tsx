@@ -13,8 +13,8 @@ const FrontPage = () => {
                 Pages
             </Typography>
             <Box sx={{ p: 2 }}>
-                <MUILink component={RouterLink} to="/test" variant="body1" color="primary">
-                    Test
+                <MUILink component={RouterLink} to="/collision_test" variant="body1" color="primary">
+                    Collision test
                 </MUILink>
                 <br />
             </Box>
