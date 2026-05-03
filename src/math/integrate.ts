@@ -1,5 +1,5 @@
-import { VecMath } from "./vec";
-import { Quaternion, Vector3 } from "three";
+import { type Vec3 } from "./vec";
+import { Quaternion } from "three";
 
 /**
  * Integrates a time-varying angular velocity of the affine form
@@ -8,7 +8,7 @@ import { Quaternion, Vector3 } from "three";
  *
  * The method advances the rotation by composing incremental
  * quaternion exponentials evaluated at midpoints of each step.
- * This preserves the rotation structure and yields second-order accuracy.
+ * This yields second-order accuracy.
  *
  * @param t0 endpoint for integration
  * @param omega0 initial angular velocity vector at t = 0
@@ -18,34 +18,27 @@ import { Quaternion, Vector3 } from "three";
  */
 function integrateRotation(
     t0: number,
-    omega0: Vector3,
-    domega: Vector3,
-    steps: number = 32
+    omega0: Vec3,
+    domega: Vec3,
+    stepsPerUnitTime: number = 32
 ): Quaternion {
     const q = new Quaternion();
+    const steps = Math.ceil(t0 * stepsPerUnitTime);
+    if (steps === 0)
+        return q;
 
     const dt = t0 / steps;
     let t = 0;
 
     // Reuse vectors
-    const omegaMid = new Vector3();
-    const theta = new Vector3();
     const deltaQ = new Quaternion();
 
     for (let i = 0; i < steps; i++) {
         const midTime = t + 0.5 * dt;
 
-        omegaMid.x = omega0.x + domega.x * midTime;
-        omegaMid.y = omega0.y + domega.y * midTime;
-        omegaMid.z = omega0.z + domega.z * midTime;
-
-        theta.x = omegaMid.x * dt;
-        theta.y = omegaMid.y * dt;
-        theta.z = omegaMid.z * dt;
-
-        const x = theta.x;
-        const y = theta.y;
-        const z = theta.z;
+        const x = (omega0[0] + domega[0] * midTime) * dt;
+        const y = (omega0[1] + domega[1] * midTime) * dt;
+        const z = (omega0[2] + domega[2] * midTime) * dt;
 
         const angleSq = x * x + y * y + z * z;
 
@@ -71,6 +64,7 @@ function integrateRotation(
  * Runs trials, compares coarse step integrations to a "ground truth"
  * obtained with higher number of steps. Reports statistics of log-angle-errors.
  */
+/*
 function testCorrectnessStats() {
     const numTrials = 1000;
     const finestSteps = 1024 * 16;
@@ -133,5 +127,6 @@ function test() {
     testCorrectnessStats();
     testPerformance();
 }
+*/
 
-export { integrateRotation, test };
+export { integrateRotation };

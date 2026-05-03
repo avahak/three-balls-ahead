@@ -23,7 +23,7 @@ class ForceSolver {
         for (const ball of group.balls)
             accMap.set(ball, { a: [0, 0, 0], dw: [0, 0, 0] });
 
-        let iter = 0;
+        let iter = 1;
         for (; iter < maxIter; iter++) {
             // Reset accumulators
             for (const ball of group.balls) {
@@ -34,7 +34,7 @@ class ForceSolver {
 
             // Compute forces and accumulate accelerations
             for (const contact of group.contacts) {
-                const vrel = contact.getRelativeVelocity();
+                const vrel = contact.getRelativeVelocity();     // v_A-v_B
                 const vn = VecMath.dot(vrel, contact.normal);
                 contact.depthDer = vn;
 

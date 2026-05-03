@@ -1,47 +1,65 @@
+import * as THREE from 'three';
 import { AssetLoader } from "../assetLoader";
 import { cantorFunction } from "../math/misc";
 import { VecMath, type Vec3 } from "../math/vec";
 import { Ball } from "../physics/ball";
-import { BallSegment, BallState } from "../physics/ballSegment";
+import { BallSegment } from "../physics/ballSegment";
 import { detectAndResolve } from "../physics/collisions/detector";
 import { EventHandler } from "../physics/eventHandler";
 import type { BallBallEvent, BallEventInternal } from "../physics/eventTypes";
 import { Table } from "../physics/table";
 
 class Simulator {
-    balls: Ball[];
-    t: number;
+    balls: Ball[] = [];
+    t: number = 0;
     eventHandler: EventHandler;
     table: Table;
     steps_DEBUG: number = 0;
     stopped: boolean = false;
+
+    config: "8-ball" | "cut" = "8-ball";
+    // config: "8-ball" | "cut" = "cut";
+
 
     // Helpers to prevent creating duplicate events
     private ballsIndex = new Map<Ball, number>();
     private bbEventsAdded = new Map<number, number>();
 
     constructor(assetLoader: AssetLoader) {
-        this.t = 0;
         this.table = new Table(assetLoader);
 
         this.eventHandler = new EventHandler();
+
+        this.restart();
+    }
+
+    restart() {
+        this.t = 0;
+        this.steps_DEBUG = 0;
+        BallSegment.evalCounter_DEBUG = 0;
+        this.bbEventsAdded = new Map();
+
+        const ballsExist = this.balls.length > 0;
 
         // Create and position balls
         const r = Table.tableJson.specs.BALL_RADIUS;
         const tableLength = Table.tableJson.specs.TABLE_LENGTH;
         // console.log("json", Table.tableJson);
-        const vx = 8;
-        const w0: Vec3 = [0, -50, 100];
-        const seg0 = BallSegment.createFromInitialValues(this.t, [-tableLength / 4, 0, 0], [vx, 0, 0], w0);
+        const vx = this.config == "8-ball" ? 7 : 3;
+        const vz = this.config == "8-ball" ? 1 : 0;
+        const w0: Vec3 = [0, -50, 10];
+        const seg0 = BallSegment.createFromInitialValues(this.t, [-tableLength / 4, 0, 0], [vx, 0, vz], w0, new THREE.Quaternion());
         console.log(seg0.t1);
-        const cueBall = new Ball(seg0);
-        cueBall.name = "Cueball";
-        this.balls = [cueBall];
+        if (ballsExist) {
+            this.balls[0].seg = seg0;
+        } else {
+            const cueBall = new Ball(seg0);
+            cueBall.name = "Cueball";
+            this.balls = [cueBall];
+        }
 
-        const MODE: string = "8-ball";
-        // const MODE: string = "cut";
-
-        if (MODE == "8-ball") {
+        if (this.config == "8-ball") {
+            let count = 1;
             for (let k = 1; k <= 5; k++) {
                 for (let j = 0; j < k; j++) {
                     const x = tableLength / 4 + r * (k - 1) * Math.sqrt(3);
@@ -49,24 +67,40 @@ class Simulator {
                     const p: Vec3 = [x, y, 0];
                     // const w0 = VecMath.vGaussian(3, 30.5) as Vec3;
                     const w0 = [0, 0, 0] as Vec3;
-                    const seg = BallSegment.createFromInitialValues(this.t, p, [0, 0, 0], w0);
-                    const ball = new Ball(seg);
-                    ball.name = `Ball_${this.balls.length}`;
-                    this.balls.push(ball);
+                    const seg = BallSegment.createFromInitialValues(this.t, p, [0, 0, 0], w0, new THREE.Quaternion());
+                    if (ballsExist) {
+                        this.balls[count].seg = seg;
+                    } else {
+                        const ball = new Ball(seg);
+                        ball.name = `Ball_${this.balls.length}`;
+                        this.balls.push(ball);
+                    }
+                    count++;
                 }
             }
-        } else if (MODE == "cut") {
-            const p: Vec3 = [tableLength / 4, 1.5 * r, 0];
-            const w0 = [0, 0, 0] as Vec3;
-            const seg = BallSegment.createFromInitialValues(this.t, p, [0, 0, 0], w0);
-            const ball = new Ball(seg);
-            ball.name = `Ball_1`;
-            this.balls.push(ball);
+        } else if (this.config == "cut") {
+            const p1: Vec3 = [0, 1.5 * r, 0];
+            const seg1 = BallSegment.createFromInitialValues(this.t, p1, [0, 0, 0], [0, 0, 0], new THREE.Quaternion());
+            const p2: Vec3 = [10 * r, -8 * r, 0];
+            const seg2 = BallSegment.createFromInitialValues(this.t, p2, [0, 0, 0], [0, 0, 0], new THREE.Quaternion());
+
+            if (ballsExist) {
+                this.balls[1].seg = seg1;
+                this.balls[2].seg = seg2;
+            } else {
+                const ball1 = new Ball(seg1);
+                ball1.name = `Ball_1`;
+                this.balls.push(ball1);
+                const ball2 = new Ball(seg2);
+                ball2.name = `Ball_2`;
+                this.balls.push(ball2);
+            }
         }
 
         for (let k = 0; k < this.balls.length; k++)
             this.ballsIndex.set(this.balls[k], k);
 
+        this.eventHandler.reset();
         this.renewEvents(this.t, this.balls);
     }
 
@@ -122,7 +156,8 @@ class Simulator {
         }
     }
 
-    advanceTime(targetTime: number) {
+
+    advanceTime(targetTime: number, solverMode: "forceSolver" | "siSolver") {
         if (this.stopped)
             return;
 
@@ -139,7 +174,8 @@ class Simulator {
                 // if (ball.seg.state === BallState.Flying) {
                 // }
                 const ballEval = ball.seg.eval(event.t);
-                ball.seg.setFromInitialValues(event.t, ballEval.p, ballEval.v, ballEval.w);
+                console.log(ball.name, ball.seg.state);
+                ball.seg.setFromInitialValues(event.t, ballEval.p, ballEval.v, ballEval.w, ballEval.q);
 
                 // console.log(event.t, event.ball);
                 this.renewEvents(event.t, [ball]);
@@ -154,9 +190,13 @@ class Simulator {
                 const ball2Eval = ball2.seg.eval(t);
                 const dist = VecMath.distance(ballEval.p, ball2Eval.p) - ball.stats.r - ball2.stats.r;
                 const text = dist < 1e-9 ? "Collision detected!" : "ball-ball without collision";
-                console.log(JSON.stringify({ text, t, simulatorT: this.t, dist, ball, ball2 }));
+                console.log("collision", structuredClone({ text, t, simulatorT: this.t, dist, ball, ball2 }));
                 if (dist < 1e-9) {
-                    const ss = detectAndResolve(t, this.balls.indexOf(ball), this.balls, this.table, "force");
+                    let ss;
+                    if (solverMode === "forceSolver")
+                        ss = detectAndResolve(t, this.balls.indexOf(ball), this.balls, this.table, "force");
+                    else
+                        ss = detectAndResolve(t, this.balls.indexOf(ball), this.balls, this.table, "si");
                     if (ss) {
                         const ballsCollision = ss.map((b) => b.ball);
                         this.renewEvents(t, ballsCollision);

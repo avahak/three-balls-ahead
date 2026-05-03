@@ -117,7 +117,7 @@ function detectAndResolve(
         console.log("after collision name,p,v", ss.ball.name, ss.p.slice(), ss.v.slice());
     }
     for (const ss of group.balls)
-        ss.ball.seg.setFromInitialValues(t, ss.p, ss.v, ss.w);
+        ss.ball.seg.setFromInitialValues(t, ss.p, ss.v, ss.w, ss.q);
     return group.balls;
 }
 

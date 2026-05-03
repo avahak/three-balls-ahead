@@ -3,6 +3,7 @@ import type { Vec3 } from "../math/vec";
 import type { Ball } from './ball';
 
 type BallSnapshot = {
+    t: number;
     p: Vec3;
     v: Vec3;
     w: Vec3;

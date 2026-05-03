@@ -8,7 +8,7 @@ const Constants = {
     M: 0.163,
     MU_SLIDE: 0.2,     // 0.2
     MU_ROLL: 0.01,
-    MU_BALL_BALL: 0.1,
+    MU_BALL_BALL: 0.5,
     // deceleration of sidespin is ~ 10 rad/s^2 (according to Dr Dave, see TP_B-2.pdf)
     // (5\mu g)/(2R) ~ 10 => \mu ~ 10*(2R)/(5g) ~ 0.012
     MU_SPIN: 0.012,

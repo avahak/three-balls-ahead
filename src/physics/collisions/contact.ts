@@ -37,15 +37,7 @@ class Contact {
         this.rB = bodyB ? VecMath.sub(point, bodyB.p) : [0, 0, 0];
 
         // Precompute inverse effective mass for normal direction
-        let invMass = bodyA.ball.stats.im;
-        const crossA = VecMath.cross(this.rA, normal);
-        let invInertiaTerm = VecMath.dot(crossA, crossA) / bodyA.ball.stats.inertia;
-        if (bodyB) {
-            invMass += bodyB.ball.stats.im;
-            const crossB = VecMath.cross(this.rB, normal);
-            invInertiaTerm += VecMath.dot(crossB, crossB) / bodyB.ball.stats.inertia;
-        }
-        this.imEff = invMass + invInertiaTerm;
+        this.imEff = bodyA.ball.stats.im + (bodyB ? bodyB.ball.stats.im : 0);
     }
 
     /** 
@@ -61,25 +53,28 @@ class Contact {
 
     /** 
      * Apply an impulse to the two bodies. 
+     * A gets -impulse and B gets impulse.
+     * Called by siSolver.
      */
     public applyImpulse(impulse: Vec3): void {
         // Body A
-        const dvA = VecMath.scale(impulse, this.bodyA.ball.stats.im);
+        const dvA = VecMath.scale(impulse, -this.bodyA.ball.stats.im);
         this.bodyA.v = VecMath.add(this.bodyA.v, dvA);
         const dwA = VecMath.cross(this.rA, impulse);
-        this.bodyA.w = VecMath.wSum([this.bodyA.w, dwA], [1, 1 / this.bodyA.ball.stats.inertia]);
+        this.bodyA.w = VecMath.wSum([this.bodyA.w, dwA], [1, -1 / this.bodyA.ball.stats.inertia]);
 
         // Body B (if exists)
         if (this.bodyB) {
-            const dvB = VecMath.scale(impulse, -this.bodyB.ball.stats.im);
+            const dvB = VecMath.scale(impulse, this.bodyB.ball.stats.im);
             this.bodyB.v = VecMath.add(this.bodyB.v, dvB);
             const dwB = VecMath.cross(this.rB, impulse);
-            this.bodyB.w = VecMath.wSum([this.bodyB.w, dwB], [1, -1 / this.bodyB.ball.stats.inertia]);
+            this.bodyB.w = VecMath.wSum([this.bodyB.w, dwB], [1, 1 / this.bodyB.ball.stats.inertia]);
         }
     }
 
     /**
      * Accumulate a force into temporary acceleration buffers `accMap`.
+     * A gets -force and B gets force.
      * Called by ForceSolver.
      */
     public applyForce(force: Vec3, dt: number, accMap: Map<BallSnapshotTagged, { a: Vec3; dw: Vec3 }>): void {

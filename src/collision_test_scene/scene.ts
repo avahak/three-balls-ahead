@@ -9,7 +9,7 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 // import vs from './shaders/vs.glsl?raw';
 // import fs from './shaders/fs.glsl?raw';
 import type { AssetLoader } from '../assetLoader';
-import { BallState } from '../physics/ballSegment';
+import { BallSegment, BallState } from '../physics/ballSegment';
 import { VecMath } from '../math/vec';
 import { FatUCBSplineGroup } from '../rendering/FatUCBSpline';
 import { OverheadCamera } from '../overheadCamera';
@@ -40,14 +40,18 @@ class Scene {
     animationRequestID: number | null = null;
     lastTime: number | null = null;
     gui: any;
-    isStopped: boolean = false;
+    isStopped: boolean = true;
 
     assetLoader: AssetLoader;
 
+    balls: THREE.Object3D[] = [];
+    ballsByName: Map<string, THREE.Object3D> = new Map();
+
     textGroup!: TextGroup;
     sg: FatUCBSplineGroup | null = null;
-    balls!: Map<string, THREE.Object3D>;
     simulator!: Simulator;
+
+    solverMode: "forceSolver" | "siSolver" = "forceSolver";
 
     constructor(container: HTMLDivElement, assetLoader: AssetLoader) {
         this.container = container;
@@ -144,14 +148,30 @@ class Scene {
         const logEvents = () => {
             console.log(this.simulator.t, this.simulator.eventHandler.queue);
         };
+        const switchSolverMode = () => {
+            this.solverMode = (this.solverMode === "forceSolver") ? "siSolver" : "forceSolver";
+        };
+        const restart = () => {
+            this.lastTime = null;
+            this.isStopped = true;
+            this.simulator.restart();
+            this.updateBallPositions();
+        };
         const myObject = {
             animateButton,
             toggleStop,
             logEvents,
+            restart,
+            switchSolverMode,
+            solverMode: this.solverMode,
         };
         this.gui.add(myObject, 'animateButton').name("Animate step");
         this.gui.add(myObject, 'toggleStop').name("Toggle stop/play");
         this.gui.add(myObject, 'logEvents').name("Log events");
+        this.gui.add(myObject, 'restart').name("Restart");
+        this.gui.add(myObject, 'solverMode', ['forceSolver', 'siSolver']).name("Solver mode").onChange((value: "forceSolver" | "siSolver") => {
+            this.solverMode = value;
+        });
         this.gui.close();
     }
 
@@ -262,7 +282,6 @@ class Scene {
         stateColor.set(BallState.Rolling, [0.25, 1, 1]);
         stateColor.set(BallState.Sliding, [1, 0.25, 0.25]);
 
-        this.balls = new Map<string, THREE.Object3D>();
         for (let k = 0; k < this.simulator.balls.length; k++) {
             const material = new THREE.MeshStandardMaterial({ color: 0x336699, roughness: 0.2, metalness: 0.2 });
             material.color = new THREE.Color('white');
@@ -276,21 +295,21 @@ class Scene {
             });
             let r = Table.tableJson.specs.BALL_RADIUS;
             ball.scale.set(r, r, r);
-            this.balls.set(`ball_${k}`, ball);
+            this.balls.push(ball);
+            this.ballsByName.set(`ball_${k}`, ball);
             this.scene.add(ball);
         }
-        this.updateBallPositions();
     }
 
     updateBallPositions() {
         const t = this.simulator.t;
-        for (let k = 0; k < this.simulator.balls.length; k++) {
-            const ball = this.balls.get(`ball_${k}`)!;
+        for (let k = 0; k < this.balls.length; k++) {
+            const ball = this.balls[k];
             const seg = this.simulator.balls[k].seg;
-            const q0 = new THREE.Quaternion().setFromEuler(ball.rotation);
-            const state = seg.eval(t, q0);      // WRONG! TODO FIX!
-            ball.setRotationFromQuaternion(state.q!);
-            ball.position.set(...state.p);
+            const evalResult = seg.eval(t);
+            if (evalResult.q)
+                ball.setRotationFromQuaternion(evalResult.q);
+            ball.position.set(...evalResult.p);
         }
     }
 
@@ -311,7 +330,7 @@ class Scene {
 
             // console.log("currentTime", currentTime);
 
-            this.simulator.advanceTime(currentTime);
+            this.simulator.advanceTime(currentTime, this.solverMode);
             if (!this.simulator.stopped)
                 this.updateBallPositions();
         }
@@ -322,6 +341,7 @@ class Scene {
         const size = 0.075;
         this.textGroup.addText(`currentTime: ${currentTime}`, [this.uiCamera.right, 1, 0], [1, 1, 1], [1, 1], size);
         this.textGroup.addText(`simulator len: ${this.simulator.eventHandler.size()}, steps: ${this.simulator.steps_DEBUG}`, [this.uiCamera.right, 1 - size, 0], [1, 1, 1], [1, 1], size);
+        this.textGroup.addText(`evalCounter_DEBUG: ${BallSegment.evalCounter_DEBUG}`, [this.uiCamera.right, 1 - 2 * size, 0], [1, 1, 1], [1, 1], size);
         this.renderer.render(this.uiScene, this.uiCamera);
     }
 }

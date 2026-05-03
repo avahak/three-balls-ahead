@@ -6,9 +6,13 @@ import { PriorityQueue } from "./priorityQueue";
 
 
 class EventHandler {
-    queue: PriorityQueue<BallEvent>;
+    queue!: PriorityQueue<BallEvent>;
 
     constructor() {
+        this.reset();
+    }
+
+    reset() {
         this.queue = new PriorityQueue<BallEvent>();
     }
 
